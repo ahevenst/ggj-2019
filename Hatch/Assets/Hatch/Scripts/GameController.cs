@@ -1,19 +1,24 @@
-﻿using System;
+﻿using Assets.Hatch.Scripts.Enumerations;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Assets.Hatch.Scripts.ScriptableObjects;
 
 public class GameController : MonoBehaviour
 {
+    public GameState currentGameState = GameState.Menu;
+    public GameStateDatabase.GameState_GameStateData gameStateData;
+
     public delegate void InteractAction();
     public static event InteractAction Interact;
     public static event InteractAction InteractActive;
     public static event InteractAction InteractInactive;
-    public delegate void CancelDialogueAction();
+    public delegate void CancelDialogueAction(bool isStatic = false);
     public static event CancelDialogueAction CancelDialogue;
-    public delegate void FinishKeypadAction();
-    public static event FinishKeypadAction FinishKeypad;
-    public delegate void EndDialogueAction();
+    public delegate void FinishModalAction();
+    public static event FinishModalAction FinishModal;
+    public delegate void EndDialogueAction(bool isStatic = false);
     public static event EndDialogueAction EndDialogue;
     public delegate void NextDialogueAction();
     public static event NextDialogueAction NextDialogue;
@@ -23,8 +28,20 @@ public class GameController : MonoBehaviour
     public static event StopPlayerAction StopPlayer;
     public delegate void StartPlayerAction();
     public static event StartPlayerAction StartPlayer;
-    public delegate void StartDialogueAction();
+    public delegate void StartDialogueAction(GameObject dialogueTarget, bool isStatic = false);
     public static event StartDialogueAction StartDialogue;
+    public delegate void CancelPhotoAction();
+    public static event CancelPhotoAction CancelPhoto;
+    public delegate void ClearFogWallAction(GameObject fogWall);
+    public static event ClearFogWallAction ClearFogWall;
+
+    public bool isPhotoActive = false;
+    public bool isInDialogue = false;
+
+    private void Start()
+    {
+        StaticEvent.LoadLevel(gameStateData[currentGameState]);
+    }
 
     public void StopCharacter()
     {
@@ -69,7 +86,16 @@ public class GameController : MonoBehaviour
     internal void EscapeFunctionsEvent()
     {
         CancelDialogue();
-        FinishKeypadEvent();
+        CancelPhotoEvent();
+        FinishModalEvent();
+    }
+
+    public void ClearFogWallEvent(GameObject fogWall)
+    {
+        if (ClearFogWall != null)
+        {
+            ClearFogWall(fogWall);
+        }
     }
 
     internal void CancelDialogueEvent()
@@ -79,14 +105,23 @@ public class GameController : MonoBehaviour
             CancelDialogue();
             InteractActiveEvent();
             StartCharacter();
+            isInDialogue = false;
         }
     }
 
-    public void FinishKeypadEvent()
+    public void CancelPhotoEvent()
     {
-        if (FinishKeypad != null)
+        if (CancelPhoto != null && isPhotoActive)
         {
-            FinishKeypad();
+            CancelPhoto();
+        }
+    }
+
+    public void FinishModalEvent()
+    {
+        if (FinishModal != null)
+        {
+            FinishModal();
             StartCharacter();
         }
     }
@@ -97,6 +132,8 @@ public class GameController : MonoBehaviour
         {
             EndDialogue();
             StartCharacter();
+            isInDialogue = false;
+
         }
     }
 
@@ -116,13 +153,24 @@ public class GameController : MonoBehaviour
         }
     }
 
-    public void StartDialogueEvent()
+    public void StartDialogueEvent(GameObject dialogueTarget, bool isStatic = false)
     {
         if (StartDialogue != null)
         {
-            StartDialogue();
+            StartDialogue(dialogueTarget, isStatic);
             InteractInactiveEvent();
             StopCharacter();
+            isInDialogue = true;
+        }
+    }
+    public void EndDialogueEvent(GameObject dialogueTarget, bool isStatic = false)
+    {
+        if (StartDialogue != null)
+        {
+            StartDialogue(dialogueTarget, isStatic);
+            InteractInactiveEvent();
+            StopCharacter();
+            isInDialogue = false;
         }
     }
 }
